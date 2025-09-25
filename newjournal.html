@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dream Interpreter AI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #f8fafc;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Fixed starry background */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: url('c:\Users\RUMA\Downloads\dream_banner_resized.png') repeat;
+      opacity: 0.15;
+      z-index: -1;
+      background-attachment: 'c:\Users\RUMA\Downloads\dream_banner_resized.png';
+    }
+
+    /* Dream Moon */
+    .dream-moon {
+      position: fixed;
+      top: 60px;
+      right: 80px;
+      width: 100px;
+      height: 100px;
+      background: radial-gradient(circle at 30% 30%, #fdfdfd, #d1d5db 70%);
+      border-radius: 50%;
+      box-shadow: 0 0 25px rgba(255,255,255,0.5);
+      animation: moonGlow 6s ease-in-out infinite;
+      z-index: -1;
+    }
+    @keyframes moonGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(255,255,255,0.3); }
+      50% { box-shadow: 0 0 40px rgba(255,255,255,0.6); }
+    }
+
+    /* Hero */
+    .hero { text-align: center; padding: 60px 20px; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; }
+    .hero h1 { font-size: 42px; margin-bottom: 15px; }
+    .hero p { font-size: 18px; max-width: 700px; margin: 0 auto 20px; }
+    .hero button { padding: 14px 28px; font-size: 16px; background: #1e293b; border: none; border-radius: 8px; cursor: pointer; color: white; }
+    .hero button:hover { background: #0f172a; }
+
+    /* Tabs */
+    .tabs { display: flex; justify-content: center; margin: 20px auto; gap: 12px; }
+    .tabs button { background: #334155; border: none; color: white; padding: 10px 18px; border-radius: 8px; cursor: pointer; }
+    .tabs button.active { background: #0ea5e9; }
+
+    /* Layout */
+    .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Chat */
+    .chat-container { background: #1e293b; border-radius: 16px; height: 70vh; display: flex; flex-direction: column; border: 1px solid #334155; }
+    .chat-header { background: #0ea5e9; padding: 12px; text-align: center; font-weight: bold; }
+    .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .message { padding: 12px 16px; border-radius: 12px; max-width: 75%; animation: fadeIn 0.3s ease; }
+    .user { background: #0ea5e9; align-self: flex-end; }
+    .bot { background: #334155; align-self: flex-start; }
+    @keyframes fadeIn { from {opacity:0;transform:translateY(5px);} to {opacity:1;transform:translateY(0);} }
+    .chat-input { display: flex; border-top: 1px solid #334155; }
+    .chat-input textarea { flex: 1; padding: 12px; background: transparent; color: white; border: none; resize: none; }
+    .chat-input button { background: #0ea5e9; border: none; padding: 0 20px; cursor: pointer; }
+
+    /* Journal */
+    .journal { background: #1e293b; padding: 20px; border-radius: 16px; height: 70vh; overflow-y: auto; }
+    .entry { background: #334155; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+
+    /* Dictionary */
+    .dictionary { background: #1e293b; padding: 20px; border-radius: 16px; height: 70vh; overflow-y: auto; }
+    .dictionary input { width: 100%; padding: 10px; margin-bottom: 12px; border-radius: 6px; border: none; }
+    .dictionary li { margin-bottom: 10px; background: #334155; padding: 10px; border-radius: 8px; }
+
+  </style>
+</head>
+<body>
+  <!-- Hero -->
+  <section class="hero">
+    <h1>🌙 Dream Interpreter AI</h1>
+    <p>Discover hidden meanings of your dreams. Save them, explore dream symbols, and track your journey.</p>
+    <button onclick="document.querySelector('.tabs').scrollIntoView({behavior:'smooth'})">Start Now</button>
+  </section>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="active" onclick="showPanel('chat')">Chat</button>
+    <button onclick="showPanel('journal')">My Journal</button>
+    <button onclick="showPanel('dictionary')">Symbol Dictionary</button>
+  </div>
+
+  <!-- Panels -->
+  <div class="container">
+    <!-- Chat -->
+    <div id="chat" class="panel active">
+      <div class="chat-container">
+        <div class="chat-header">Dream Chat</div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+          <textarea id="dreamInput" placeholder="Describe your dream..."></textarea>
+          <button onclick="sendDream()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Journal -->
+    <div id="journal" class="panel">
+      <div class="journal" id="journalEntries"></div>
+    </div>
+
+    <!-- Dictionary -->
+    <div id="dictionary" class="panel">
+      <div class="dictionary">
+        <input type="text" id="searchSymbol" placeholder="Search symbol...">
+        <ul id="symbolList"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Special Dream Moon -->
+  <div class="dream-moon"></div>
+
+  <script>
+    const API_URL = "https://api.perplexity.ai/chat/completions";
+    const API_KEY = "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"; // replace safely
+
+    const chatMessages = document.getElementById("chatMessages");
+    const dreamInput = document.getElementById("dreamInput");
+    const journalEntries = document.getElementById("journalEntries");
+    const symbolList = document.getElementById("symbolList");
+
+    const symbols = {
+      "Flying": "Desire for freedom or escape from stress.",
+      "Water": "Emotions, subconscious thoughts, and healing.",
+      "Teeth Falling": "Anxiety about appearance, aging, or loss of control.",
+      "Chasing": "Avoiding an issue or fear in real life.",
+      "Falling": "Insecurity or feeling lack of support.",
+      "Animals": "Instincts or hidden aspects of personality."
+    };
+
+    // Populate dictionary
+    function loadSymbols() {
+      symbolList.innerHTML = "";
+      for (let key in symbols) {
+        let li = document.createElement("li");
+        li.innerHTML = `<strong>${key}:</strong> ${symbols[key]}`;
+        symbolList.appendChild(li);
+      }
+    }
+    loadSymbols();
+
+    document.getElementById("searchSymbol").addEventListener("input", e => {
+      let term = e.target.value.toLowerCase();
+      symbolList.innerHTML = "";
+      for (let key in symbols) {
+        if (key.toLowerCase().includes(term)) {
+          let li = document.createElement("li");
+          li.innerHTML = `<strong>${key}:</strong> ${symbols[key]}`;
+          symbolList.appendChild(li);
+        }
+      }
+    });
+
+    // Add message
+    function addMessage(text, sender) {
+      const msg = document.createElement("div");
+      msg.classList.add("message", sender);
+      msg.innerText = text;
+      chatMessages.appendChild(msg);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Save to Journal
+    function saveToJournal(dream, interpretation) {
+      const entry = { dream, interpretation, date: new Date().toLocaleString() };
+      let saved = JSON.parse(localStorage.getItem("dreamJournal")) || [];
+      saved.push(entry);
+      localStorage.setItem("dreamJournal", JSON.stringify(saved));
+      renderJournal();
+    }
+
+    function renderJournal() {
+      journalEntries.innerHTML = "";
+      let saved = JSON.parse(localStorage.getItem("dreamJournal")) || [];
+      saved.forEach(e => {
+        const div = document.createElement("div");
+        div.classList.add("entry");
+        div.innerHTML = `<strong>${e.date}</strong><br>🌙 <em>${e.dream}</em><br>🔮 ${e.interpretation}`;
+        journalEntries.appendChild(div);
+      });
+    }
+    renderJournal();
+
+    // Send dream
+    async function sendDream() {
+      const dream = dreamInput.value.trim();
+      if (!dream) return;
+      addMessage(dream, "user");
+      dreamInput.value = "";
+      addMessage("✨ Interpreting your dream...", "bot");
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "sonar-pro",
+            messages: [
+              { role: "system", content: "You are a professional dream interpreter." },
+              { role: "user", content: dream }
+            ]
+          })
+        });
+
+        const data = await response.json();
+        const reply = data.choices[0].message.content;
+
+        chatMessages.lastChild.remove();
+        addMessage(reply, "bot");
+
+        // Save to journal
+        saveToJournal(dream, reply);
+
+      } catch (err) {
+        chatMessages.lastChild.remove();
+        addMessage("⚠️ Error, try again.", "bot");
+      }
+    }
+
+    // Switch panels
+    function showPanel(id) {
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+      document.querySelector(`.tabs button[onclick="showPanel('${id}')"]`).classList.add("active");
+    }
+  </script>
+</body>
+</html>
